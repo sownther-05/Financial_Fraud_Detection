@@ -1,0 +1,359 @@
+import numpy as np 
+import pandas as pd 
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import seaborn as sns
+sns.set(color_codes=True)
+
+
+from sklearn import preprocessing
+
+
+import warnings
+warnings.filterwarnings("ignore")
+
+
+
+df = pd.read_csv("G:\ds\project dataset (demo).csv")
+
+df.head(5)
+
+df.tail(5)
+
+
+df.dtypes
+
+df.shape
+
+df.type.value_counts()
+
+df.isFraud.value_counts()
+
+df.isFlaggedFraud.value_counts()
+
+ax = pd.value_counts(df['isFraud'], sort = True).sort_index().plot(kind='bar', title="Fraud transaction count")
+for p in ax.patches:
+    ax.annotate(str(format(int(p.get_height()), ',d')), (p.get_x(), p.get_height()))
+    ax.set_xlabel("isFraud")
+    ax.set_ylabel("Count of transaction")
+plt.show()
+
+
+print(df['type'].value_counts())
+df['type'].value_counts().plot.pie(autopct='%.2f',figsize=(5, 5))
+plt.title('type')
+plt.tight_layout()
+
+ax = df.groupby(['type', 'isFraud']).size().plot(kind='bar')
+ax.set_title("# of transaction which are the actual fraud per transaction type")
+ax.set_xlabel("(Type, isFraud)")
+ax.set_ylabel("Count of transaction")
+for p in ax.patches:
+    ax.annotate(str(format(int(p.get_height()), ',d')), (p.get_x(), p.get_height()*1.01))
+
+data_fraud = df[df.isFraud == 1] 
+data_fraud.type.value_counts().plot.bar()
+
+ax = df.groupby(['type', 'isFlaggedFraud']).size().plot(kind='bar')
+ax.set_title("# of transaction which is flagged as fraud per transaction type")
+ax.set_xlabel("(Type, isFlaggedFraud)")
+ax.set_ylabel("Count of transaction")
+for p in ax.patches:
+    ax.annotate(str(format(int(p.get_height()), ',d')), (p.get_x(), p.get_height()*1.01))
+
+df.corr()
+
+plt.figure(figsize=(10,8))
+sns.heatmap(df.corr(), annot = True, fmt = '.3f')
+
+df = df.drop(['oldbalanceDest','oldbalanceOrg'],axis = 1)
+
+df.head()
+
+sns.heatmap(df[['amount','isFraud']].corr(),annot = True)
+
+data = pd.get_dummies(df['type'], drop_first=True)
+
+df = pd.concat([df,data],axis=1)
+
+df.head()
+
+
+df.drop(labels = ['type','nameOrig','nameDest'], axis=1,inplace=True)
+
+df.head()
+
+X = df.drop(['isFraud'],axis=1)
+y = df['isFraud']
+
+
+from sklearn.model_selection import train_test_split
+
+# Assuming you have your complete dataset stored in X and y
+
+# Split the dataset into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Print the shape of training data
+print("Shape of X_train:", X_train.shape)
+print("Shape of y_train:", y_train.shape)
+
+from sklearn.impute import SimpleImputer
+from sklearn.model_selection import train_test_split
+from imblearn.under_sampling import RandomUnderSampler
+
+# Assuming you have your complete dataset stored in X and y
+
+# Check for missing values
+print("Number of missing values in X: ", X.isnull().sum())
+print("Number of missing values in y: ", y.isnull().sum())
+
+# Split the dataset into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Handle missing values in X_train and X_test
+imputer = SimpleImputer(strategy='mean')
+X_train = imputer.fit_transform(X_train)
+X_test = imputer.transform(X_test)
+
+# Perform undersampling
+rus = RandomUnderSampler(random_state=0)
+
+import numpy as np
+
+# Identify NaN values in y_train
+nan_indices = np.isnan(y_train)
+
+# Remove NaN values from X_train and y_train
+X_train_clean = X_train[~nan_indices]
+y_train_clean = y_train[~nan_indices]
+
+print("Before UnderSampling, counts of label '1': {}".format(sum(y_train_clean == 1)))
+print("Before UnderSampling, counts of label '0': {} \n".format(sum(y_train_clean == 0)))
+
+from imblearn.under_sampling import RandomUnderSampler
+
+rus = RandomUnderSampler(random_state=0)
+X_rus, y_rus = rus.fit_resample(X_train_clean, y_train_clean)
+
+print('After UnderSampling, the shape of train_X: {}'.format(X_rus.shape))
+print('After UnderSampling, the shape of train_y: {} \n'.format(y_rus.shape))
+
+
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X_rus, y_rus, test_size = 0.3, random_state = 42)
+
+from sklearn.linear_model import LogisticRegression
+logmodel = LogisticRegression()
+logmodel.fit(X_train,y_train)
+lm_predict = logmodel.predict(X_test)
+
+from sklearn.metrics import confusion_matrix, accuracy_score
+print("=== Model Accuracy ===")
+acc_lm=accuracy_score(lm_predict,y_test)
+print(acc_lm)
+print('\n')
+print("=== Confusion Matrix ===")
+cm_lm = confusion_matrix(lm_predict,y_test)
+print(cm_lm)
+
+from sklearn.metrics import classification_report
+from sklearn.metrics import roc_curve, auc
+print("=== Classification Report ===")
+print(classification_report(y_test, lm_predict))
+print('\n')
+print("=== All AUC Scores ===")
+fpr_lm,recall_lm,thresholds_lm = roc_curve(y_test, lm_predict)
+auc_lm=auc(fpr_lm, recall_lm)
+print('AUC: %.2f' % auc_lm)
+
+fpr_lm, tpr_lm, thresholds_lm = roc_curve(y_test, lm_predict)
+
+def plot_roc_curve_lm(fpr_lm, tpr_lm):
+    plt.plot(fpr_lm, tpr_lm, color='orange', label= ('ROC','AUC: %.2f' % auc_lm))
+    plt.plot([0, 1], [0, 1], color='darkblue', linestyle='--')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Logistic Regression - Receiver Operating Characteristic (ROC) Curve')
+    plt.legend()
+    plt.show()
+plot_roc_curve_lm(fpr_lm, tpr_lm)
+
+from sklearn.ensemble import RandomForestClassifier
+rfc = RandomForestClassifier(n_estimators=100, oob_score=False, n_jobs=-1, min_samples_leaf=1)
+rfc.fit(X_train,y_train)
+rfc_predict = rfc.predict(X_test)
+
+# Check the accuracy score and confusion matrix
+print("=== Model Accuracy ===")
+acc_rfc=accuracy_score(rfc_predict,y_test)
+print(acc_rfc)
+print('\n')
+print("=== Confusion Matrix ===")
+cm_rfc = confusion_matrix(rfc_predict,y_test)
+print(cm_rfc)
+
+print("=== Classification Report ===")
+print(classification_report(y_test, rfc_predict))
+print('\n')
+print("=== All AUC Scores ===")
+fpr_rfc, recall_rfc, thresholds_rfc = roc_curve(y_test, rfc_predict)
+auc_rfc=auc(fpr_rfc, recall_rfc)
+print('AUC: %.2f' % auc_rfc)
+
+fpr_rfc, tpr_rfc, thresholds_rfc = roc_curve(y_test, rfc_predict)
+
+def plot_roc_curve_rfc(fpr_rfc, tpr_rfc):
+    plt.plot(fpr_rfc, tpr_rfc, color='orange', label= ('ROC','AUC: %.2f' % auc_rfc))
+    plt.plot([0, 1], [0, 1], color='darkblue', linestyle='--')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Random Forest - Receiver Operating Characteristic (ROC) Curve')
+    plt.legend()
+    plt.show()
+plot_roc_curve_rfc(fpr_rfc, tpr_rfc)
+
+from sklearn.tree import DecisionTreeClassifier
+dtree = DecisionTreeClassifier(max_depth=10)
+dtree.fit(X_train,y_train)
+dtree_predict = dtree.predict(X_test)
+
+# Check the accuracy score and confusion matrix
+print("=== Model Accuracy ===")
+acc_dtree=accuracy_score(dtree_predict,y_test)
+print(acc_dtree)
+print('\n')
+print("=== Confusion Matrix ===")
+cm_dtree = confusion_matrix(dtree_predict,y_test)
+print(cm_dtree)
+
+print("=== Classification Report ===")
+print(classification_report(y_test, dtree_predict))
+print('\n')
+print("=== All AUC Scores ===")
+fpr_dtree, recall_dtree, thresholds_dtree = roc_curve(y_test, dtree_predict)
+auc_dtree=auc(fpr_dtree, recall_dtree)
+print('AUC: %.2f' % auc_dtree)
+
+fpr_dtree, tpr_dtree, thresholds_dtree = roc_curve(y_test, dtree_predict)
+
+def plot_roc_curve_dtree(fpr_dtree, tpr_dtree):
+    plt.plot(fpr_dtree, tpr_dtree, color='orange', label= ('ROC','AUC: %.2f' % auc_dtree))
+    plt.plot([0, 1], [0, 1], color='darkblue', linestyle='--')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Decision Tree - Receiver Operating Characteristic (ROC) Curve')
+    plt.legend()
+    plt.show()
+plot_roc_curve_dtree(fpr_dtree, tpr_dtree)
+
+from xgboost import XGBClassifier
+xgb = XGBClassifier()
+xgb.fit(X_train,y_train)
+xgb_predict = xgb.predict(X_test)
+
+# Check the accuracy score and confusion matrix
+print("=== Model Accuracy ===")
+acc_xgb=accuracy_score(xgb_predict,y_test)
+print(acc_xgb)
+print('\n')
+print("=== Confusion Matrix ===")
+cm_xgb = confusion_matrix(xgb_predict,y_test)
+print(cm_xgb)
+
+print("=== Classification Report ===")
+print(classification_report(y_test, xgb_predict))
+print('\n')
+print("=== All AUC Scores ===")
+fpr_xgb, recall_xgb, thresholds_xgb = roc_curve(y_test, xgb_predict)
+auc_xgb=auc(fpr_xgb, recall_xgb)
+print('AUC: %.2f' % auc_xgb)
+
+fpr_xgb, tpr_xgb, thresholds_xgb = roc_curve(y_test, xgb_predict)
+
+def plot_roc_curve_xgb(fpr_xgb, tpr_xgb):
+    plt.plot(fpr_xgb, tpr_xgb, color='orange', label= ('ROC','AUC: %.2f' % auc_xgb))
+    plt.plot([0, 1], [0, 1], color='darkblue', linestyle='--')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('XGBoost - Receiver Operating Characteristic (ROC) Curve')
+    plt.legend()
+    plt.show()
+plot_roc_curve_xgb(fpr_xgb, tpr_xgb)
+
+
+from sklearn.neighbors import KNeighborsClassifier
+neighbors = KNeighborsClassifier(n_neighbors=18)
+neighbors.fit(X_train,y_train)
+neighbors_predict = neighbors.predict(X_test)
+
+# Check the accuracy score and confusion matrix
+print("=== Model Accuracy ===")
+acc_neighbors=accuracy_score(neighbors_predict,y_test)
+print(acc_neighbors)
+print('\n')
+print("=== Confusion Matrix ===")
+cm_neighbors = confusion_matrix(neighbors_predict,y_test)
+print(cm_neighbors)
+
+print("=== Classification Report ===")
+print(classification_report(y_test, neighbors_predict))
+print('\n')
+print("=== All AUC Scores ===")
+fpr_neighbors, recall_neighbors, thresholds_neighbors = roc_curve(y_test, neighbors_predict)
+auc_neighbors=auc(fpr_neighbors, recall_neighbors)
+print('AUC: %.2f' % auc_neighbors)
+
+fpr_neighbors, tpr_neighbors, thresholds_neighbors = roc_curve(y_test, neighbors_predict)
+
+def plot_roc_curve_neighbors(fpr_neighbors, tpr_neighbors):
+    plt.plot(fpr_neighbors, tpr_neighbors, color='orange', label= ('ROC','AUC: %.2f' % auc_neighbors))
+    plt.plot([0, 1], [0, 1], color='darkblue', linestyle='--')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('KNN - Receiver Operating Characteristic (ROC) Curve')
+    plt.legend()
+    plt.show()
+plot_roc_curve_neighbors(fpr_neighbors, tpr_neighbors)
+
+plt.figure(figsize=(8, 6))
+plt.rcParams.update({'font.size': 14})
+plt.plot(fpr_xgb, tpr_xgb, color='darkorange',lw=2, label= ('ROC-XGB','AUC: %.3f' % auc_xgb))
+
+plt.plot(fpr_dtree, tpr_dtree, color='green',lw=2 ,label= ('ROC-DT','AUC: %.3f' % auc_dtree))
+
+plt.plot(fpr_rfc, tpr_rfc, color='crimson',lw=2, label= ('ROC-RFC','AUC: %.3f' % auc_rfc))
+
+plt.plot([0, 1], [0, 1], color='navy', lw=1, linestyle='--')
+plt.legend(loc="lower right")
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('Receiver Operating Characteristic (ROC) - Comparison')
+plt.show()
+
+fig = plt.figure()
+ax = fig.add_axes([0,0,0.8,0.8])
+algo = ['LR','RF', 'DT', 'XGB','KNN']
+acc = [0.68,0.93,0.93,0.93,0.82]
+ax.bar(algo,acc)
+ax.set_xlabel('Models')
+ax.set_ylabel('Accuracy Score')
+ax.set_title('Algorithm Comparison')
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
